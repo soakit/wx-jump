@@ -6,6 +6,7 @@ const adb = require('node-adb');
 const deviceID = 'e3c7a0ac'
 const imageName = "temp.png"
 const faildPath = "./failed"
+const debugPath = "./debug"
 let isFindEnd = false
 // 可能要调节 start
 const initSecondDot = {
@@ -73,21 +74,6 @@ function getCurPos(cb) {
         const height = pixels.shape[1]
         let isFind = false
         // 左上角是原点
-        // console.log(
-        //  pixels.get(width - 1, 0, 0),
-        //  pixels.get(width - 1, 0, 1),
-        //  pixels.get(width - 1, 0, 2),
-        //  pixels.get(width - 1, 0, 3)
-        // )
-
-        // (56 55 96) (56 55 96)
-		// (55 56 97) (55 56 97)
-		// or
-		// (56 56 96) (56 55 96)
-		// (55 56 97) (55 56 97)
-		// or
-		// (55 56 97) (56 55 95)
-		// (55 56 97) (55 56 97)
         for (let i = 0; i < width; i++) {
             for (let j = height - 1; j >=0; j--) {
                 const r = pixels.get(i, j, 0)
@@ -103,30 +89,6 @@ function getCurPos(cb) {
                     })
                 	return
                 }
-                // const str = `(${r} ${g} ${b})`
-                // if (str !== '(56 55 96)' && str !== '(56 56 96)' && str !== '(55 56 97)') {
-                // 	continue
-                // }
-                // // console.log(i, j);
-                // const nextR = pixels.get(i + 1, j, 0)
-                // const nextG = pixels.get(i + 1, j, 1)
-                // const nextB = pixels.get(i + 1, j, 2)
-                // const nextLineR = pixels.get(i, j + 1, 0)
-                // const nextLineG = pixels.get(i, j + 1, 1)
-                // const nextLineB = pixels.get(i, j + 1, 2)
-                // if (
-                //     nextR === 56 && nextG === 55 && nextB === 96 &&
-                //     nextLineR === 55 && nextLineG === 56 && nextLineB === 97
-                // ) {
-                // 	isFind = true
-                //     // 找到的是左上角的格子456 1054
-                //     // 中心格子是457 1055
-                //     console.log('找到起始点:', i, j);
-                //     cb && cb({
-                //         x: i + 1,
-                //         y: j + 1
-                //     })
-                // }
             }
         }
         if (!isFind) {
@@ -196,10 +158,11 @@ function jump(distance) {
     pressTime = Math.max(pressTime, 200)   
     pressTime = parseInt(pressTime)
     console.log('按的时间:', pressTime)
+    copyFile(imageName, debugPath, Date.now() + '_' + distance + '_' + pressTime + )
     adbExcute(['shell', 'input swipe', swipePos.x1, swipePos.y1, swipePos.x2, swipePos.y2, pressTime], function() {
-    	// setTimeout(function() {
-    	// 	main()
-    	// }, 5000)
+    	setTimeout(function() {
+			main()
+    	}, 2000)
     })
 }
 
@@ -210,6 +173,23 @@ function adbExcute(shell, cb) {
 	},function(result){
 	    cb && cb(result)
 	});
+}
+
+/**
+ * [copyFile description]
+ * @param  {[type]} fileName [拷贝的目标文件]
+ * @param  {[type]} url      [拷贝的目标文件夹]
+ * @param  {[type]} destName [拷贝的目标文件名]
+ * @return {[type]}          [description]
+ */
+function copyFile(fileName, url, destName) {
+	var sourceFile = path.join(__dirname, fileName);
+	var destPath = path.join(__dirname, url, destName ? destName : (Date.now() + fileName));
+
+	var readStream = fs.createReadStream(sourceFile);
+	var writeStream = fs.createWriteStream(destPath);
+	readStream.pipe(writeStream);
+	console.log(`copy failed file successfully!`)
 }
 
 function main() {
@@ -232,24 +212,6 @@ function main() {
 			})
 		})
 	})	
-}
-
-/**
- * 拷贝文件
- * @param  {[type]} fileName [拷贝的目标文件]
- * @param  {[type]} url      [拷贝的目标文件夹]
- * @return {[type]}          
- */
-function copyFile(fileName, url) {
-	var sourceFile = path.join(__dirname, fileName);
-	var destPath = path.join(__dirname, url, Date.now() + fileName);
-
-	var readStream = fs.createReadStream(sourceFile);
-	var writeStream = fs.createWriteStream(destPath);
-	readStream.pipe(writeStream);
-	console.log(`copy failed file successfully!`)
-	// width: 76 
-	// bottom: 20
 }
 
 main()
