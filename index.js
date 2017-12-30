@@ -2,6 +2,7 @@ const path = require("path")
 const fs = require("fs")
 const getPixels = require("get-pixels")
 const adb = require('node-adb');
+const _ = require('lodash')
 
 const deviceID = 'e3c7a0ac'
 const imageName = "temp.png"
@@ -19,7 +20,7 @@ const swipePos = {
 	x2: 330,
 	y2: 420
 }
-const pressCoefficient = 1.488
+const pressCoefficient = 1.468
 // 可能要调节 end
 
 
@@ -99,31 +100,62 @@ function getCurPos(cb) {
     })
 }
 
-function getNextPos(cb, isFirst) {
+function getNextPos(cb, isFirst, firstY) {
     if (!isFirst) {
     	getPixels(path.resolve(imageName), function(err, pixels) {
 	        if (err) {
 	            return
 	        }
 	        const width = pixels.shape[0]
-	        const height = pixels.shape[1]
-	        const xArr = [], yArr = []
+	        // const height = pixels.shape[1]
+	        const circleW = 38, circleH = 22
+	        let xArr = [], yArr = [], arr = []
 	        for (let i = 0; i <= width; i++) {
-	            for (let j = 0; j <= height; j++) {
+	            for (let j = 300; j <= firstY; j++) {
 	                const r = pixels.get(i, j, 0)
 	                const g = pixels.get(i, j, 1)
 	                const b = pixels.get(i, j, 2)
 	                if (r === 245 && g === 245 && b === 245) {
-	                	xArr.push(i)
-	                	yArr.push(j)
-	                } else {
-	                	continue
+	                	arr.push({
+	                		x: i,
+	                		y: j
+	                	})
 	                }
 	            }
 	        }
-	        const x = (Math.min.apply(Math, xArr) + Math.max.apply(Math, xArr)) / 2
-	        const y = (Math.min.apply(Math, yArr) + Math.max.apply(Math, yArr)) / 2
-	        // console.log(xArr, yArr)
+
+	        const groupX = _.groupBy(arr, function(item) {
+	        	return item.x
+	        })
+	        const groupY = _.groupBy(arr, function(item) {
+	        	return item.y
+	        })
+	        for (const i in groupX) {
+	        	if (groupX[i].length === 22) {
+	        		xArr = xArr.concat(groupX[i].map(item => item.x))
+	        		// console.log(groupX[i])
+	        	}
+	        }
+	        for (const i in groupY) {
+	        	if (groupY[i].length === 38) {
+	        		yArr = yArr.concat(groupY[i].map(item => item.y))
+	        		// console.log(groupY[i])
+	        	}
+	        }
+	       	// console.log(new Set(xArr))
+	       	// console.log(new Set(yArr))
+	        const minX = Math.min.apply(Math, xArr)
+	        const maxX = Math.max.apply(Math, xArr)
+	        const minY = Math.min.apply(Math, yArr)
+	        const maxY = Math.max.apply(Math, yArr)
+	        const x = (minX + maxX) / 2
+	        const y = (minY + maxY) / 2
+	        if (maxX - minX > circleW || maxY - minY > circleH) {
+	        	console.log('宽:',  maxX - minX, '高:',  maxY - minY)
+	        	console.log('找错结束点了', x, y)
+	        	copyFile(imageName, faildPath)
+	        	return
+	        }
 	        if (x && y) {
 	        	isFindEnd = true
 		        console.log('找到结束点:', x, y)
@@ -142,9 +174,7 @@ function getNextPos(cb, isFirst) {
     		cb && cb(initSecondDot)	
     	} else {
     		copyFile(imageName, faildPath)
-    		process.exit(0)
     	}
-    	
     }
 }
 
@@ -152,13 +182,13 @@ function calc(first, second) {
 	return Math.sqrt((first.x - second.x)*(first.x - second.x) + (first.y - second.y)*(first.y - second.y))
 }
 
-function jump(distance) {
+function jump(distance, isRight) {
 	console.log('距离:', distance)
-	let = pressTime = distance * pressCoefficient
-    pressTime = Math.max(pressTime, 200)   
+	let = pressTime = distance * (isRight ? pressCoefficient : 1.472)
     pressTime = parseInt(pressTime)
+    pressTime = Math.max(pressTime, 240)
     console.log('按的时间:', pressTime)
-    copyFile(imageName, debugPath, Date.now() + '_' + distance + '_' + pressTime + )
+    copyFile(imageName, debugPath, Date.now() + '_' + distance + '_' + pressTime + imageName)
     adbExcute(['shell', 'input swipe', swipePos.x1, swipePos.y1, swipePos.x2, swipePos.y2, pressTime], function() {
     	setTimeout(function() {
 			main()
@@ -189,7 +219,7 @@ function copyFile(fileName, url, destName) {
 	var readStream = fs.createReadStream(sourceFile);
 	var writeStream = fs.createWriteStream(destPath);
 	readStream.pipe(writeStream);
-	console.log(`copy failed file successfully!`)
+	console.log(`copy file successfully!`)
 }
 
 function main() {
@@ -197,18 +227,17 @@ function main() {
 		adbExcute(['pull', '/sdcard/' + imageName, '.'], function() {
 			getCurPos(function(first) {
 				if (!first) {
-					process.exit(0)
 					return
 				}
 				getNextPos(function(second1){
 					if (!second1) {
 						getNextPos(function(second2){
-							jump(calc(first, second2))
-						}, true)
+							jump(calc(first, second2), second2.x > first.x)
+						}, true, first.y)
 					} else {
-						jump(calc(first, second1))	
+						jump(calc(first, second1), second1.x > first.x)	
 					}
-				})
+				}, false, first.y)
 			})
 		})
 	})	
