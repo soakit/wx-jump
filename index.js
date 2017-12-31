@@ -125,8 +125,8 @@ function findCenter(pixels, first, cb) {
 			break
     	}
     }
-    console.log(xArr)
-    console.log(rgb, obj.y)
+    // console.log(xArr)
+    // console.log(rgb, obj.y)
     const centerX = _.sum(xArr) / xArr.length
     // 值是tan 30°, math.sqrt(3) / 3
     const centerY = first.y - Math.abs(centerX - first.x) * Math.sqrt(3) / 3
@@ -153,7 +153,7 @@ function getNextPos(cb, isFirst, first) {
 	                const r = pixels.get(i, j, 0)
 	                const g = pixels.get(i, j, 1)
 	                const b = pixels.get(i, j, 2)
-	                if (r === 184 && g === 184 && b === 184) {
+	                if (r === 245 && g === 245 && b === 245) {
 	                	arr.push({
 	                		x: i,
 	                		y: j
