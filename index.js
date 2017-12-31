@@ -123,29 +123,32 @@ function getNextPos(cb, isFirst, firstY) {
 	                }
 	            }
 	        }
-
-	        const groupX = _.groupBy(arr, function(item) {
-	        	return item.x
-	        })
 	        const groupY = _.groupBy(arr, function(item) {
 	        	return item.y
 	        })
-	        for (const i in groupX) {
-	        	if (groupX[i].length === 22) {
-	        		xArr = xArr.concat(groupX[i].map(item => item.x))
-	        		// console.log(groupX[i])
+	        for (const i in groupY) {
+	        	if (groupY[i].length >= 37 && groupY[i].length <= 39) {
+	        		xArr = xArr.concat(groupY[i].map(item => item.x))
 	        	}
 	        }
-	        for (const i in groupY) {
-	        	if (groupY[i].length === 38) {
-	        		yArr = yArr.concat(groupY[i].map(item => item.y))
-	        		// console.log(groupY[i])
+	        const minX = Math.min.apply(Math, xArr)
+	        const maxX = Math.max.apply(Math, xArr)
+	        arr.forEach(item => {
+	        	if (item.x < minX || item.x > maxX) {
+	        		item.x = 0
+	        		item.y = 0
+	        	}
+	        })
+	        const groupX = _.groupBy(arr, function(item) {
+	        	return item.x
+	        })
+	        for (const i in groupX) {
+	        	if (groupX[i].length >= 21 && groupX[i].length <= 23) {
+	        		yArr = yArr.concat(groupX[i].map(item => item.y))
 	        	}
 	        }
 	       	// console.log(new Set(xArr))
 	       	// console.log(new Set(yArr))
-	        const minX = Math.min.apply(Math, xArr)
-	        const maxX = Math.max.apply(Math, xArr)
 	        const minY = Math.min.apply(Math, yArr)
 	        const maxY = Math.max.apply(Math, yArr)
 	        const x = (minX + maxX) / 2
@@ -188,7 +191,10 @@ function jump(distance, isRight) {
     pressTime = parseInt(pressTime)
     pressTime = Math.max(pressTime, 240)
     console.log('按的时间:', pressTime)
-    copyFile(imageName, debugPath, Date.now() + '_' + distance + '_' + pressTime + imageName)
+    const destName = Date.now() + '_' + distance + '_' + pressTime + imageName
+    console.log('文件名:', destName)
+    console.log('\n')
+    copyFile(imageName, debugPath, destName)
     adbExcute(['shell', 'input swipe', swipePos.x1, swipePos.y1, swipePos.x2, swipePos.y2, pressTime], function() {
     	setTimeout(function() {
 			main()
@@ -219,7 +225,6 @@ function copyFile(fileName, url, destName) {
 	var readStream = fs.createReadStream(sourceFile);
 	var writeStream = fs.createWriteStream(destPath);
 	readStream.pipe(writeStream);
-	console.log(`copy file successfully!`)
 }
 
 function main() {
