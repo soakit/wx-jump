@@ -1,4 +1,5 @@
 node_modules/
 temp.png
-debug
-failed
+debug/**
+failed/**
+bak

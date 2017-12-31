@@ -1,13 +1,15 @@
 const path = require("path")
 const fs = require("fs")
 const getPixels = require("get-pixels")
-const adb = require('node-adb');
+const gm = require('gm')
+const adb = require('node-adb')
 const _ = require('lodash')
 
 const deviceID = 'e3c7a0ac'
 const imageName = "temp.png"
-const faildPath = "./failed"
-const debugPath = "./debug"
+const faildPath = "./failed/"
+const debugPath = "./debug/"
+const scoreUpHeight = 300
 let isFindEnd = false
 // 可能要调节 start
 const initSecondDot = {
@@ -100,7 +102,43 @@ function getCurPos(cb) {
     })
 }
 
-function getNextPos(cb, isFirst, firstY) {
+function findCenter(pixels, first, cb) {
+	const width = pixels.shape[0]
+	const xArr = [], obj = {}, rgb = []
+	for (let j = scoreUpHeight; j <= first.y; j++) {
+    	for (let i = 0; i <= width; i++) {
+            const r = pixels.get(i, j, 0)
+            const g = pixels.get(i, j, 1)
+            const b = pixels.get(i, j, 2)
+            if (i === 0) {
+        		obj.r = r	
+        		obj.g = g	
+        		obj.b = b	
+        	}
+        	if (r !== obj.r && b !== obj.b && g !== obj.g) {
+        		xArr.push(i)
+        		obj.y = j
+        		rgb.push({r, g, b})
+        	}
+        }
+        if (xArr.length > 0) {
+			break
+    	}
+    }
+    console.log(xArr)
+    console.log(rgb, obj.y)
+    const centerX = _.sum(xArr) / xArr.length
+    // 值是tan 30°, math.sqrt(3) / 3
+    const centerY = first.y - Math.abs(centerX - first.x) * Math.sqrt(3) / 3
+    isFindEnd = true
+    console.log('找到结束点:', centerX, centerY)
+    cb && cb({
+    	x: centerX,
+    	y: centerY
+	})
+}
+
+function getNextPos(cb, isFirst, first) {
     if (!isFirst) {
     	getPixels(path.resolve(imageName), function(err, pixels) {
 	        if (err) {
@@ -111,11 +149,11 @@ function getNextPos(cb, isFirst, firstY) {
 	        const circleW = 38, circleH = 22
 	        let xArr = [], yArr = [], arr = []
 	        for (let i = 0; i <= width; i++) {
-	            for (let j = 300; j <= firstY; j++) {
+	            for (let j = scoreUpHeight; j <= first.y; j++) {
 	                const r = pixels.get(i, j, 0)
 	                const g = pixels.get(i, j, 1)
 	                const b = pixels.get(i, j, 2)
-	                if (r === 245 && g === 245 && b === 245) {
+	                if (r === 184 && g === 184 && b === 184) {
 	                	arr.push({
 	                		x: i,
 	                		y: j
@@ -154,10 +192,11 @@ function getNextPos(cb, isFirst, firstY) {
 	        const x = (minX + maxX) / 2
 	        const y = (minY + maxY) / 2
 	        if (maxX - minX > circleW || maxY - minY > circleH) {
-	        	console.log('宽:',  maxX - minX, '高:',  maxY - minY)
-	        	console.log('找错结束点了', x, y)
-	        	copyFile(imageName, faildPath)
-	        	return
+	        	// console.log('宽:',  maxX - minX, '高:',  maxY - minY)
+	        	// console.log('找错结束点了', x, y)
+	        	// copyFile(imageName, faildPath)
+	        	// return
+	        	findCenter(pixels, first, cb)
 	        }
 	        if (x && y) {
 	        	isFindEnd = true
@@ -167,8 +206,9 @@ function getNextPos(cb, isFirst, firstY) {
 		        	y: y
 	        	})
 	        } else {
-	        	console.log('没找到结束点')
-                cb && cb(null)
+	        	// console.log('没找到结束点')
+                // cb && cb(null)
+                findCenter(pixels, first, cb)
 	        }
 	    })
     } else {
@@ -185,21 +225,33 @@ function calc(first, second) {
 	return Math.sqrt((first.x - second.x)*(first.x - second.x) + (first.y - second.y)*(first.y - second.y))
 }
 
-function jump(distance, isRight) {
-	console.log('距离:', distance)
-	let = pressTime = distance * (isRight ? pressCoefficient : 1.472)
-    pressTime = parseInt(pressTime)
-    pressTime = Math.max(pressTime, 240)
-    console.log('按的时间:', pressTime)
-    const destName = Date.now() + '_' + distance + '_' + pressTime + imageName
-    console.log('文件名:', destName)
-    console.log('\n')
-    copyFile(imageName, debugPath, destName)
-    adbExcute(['shell', 'input swipe', swipePos.x1, swipePos.y1, swipePos.x2, swipePos.y2, pressTime], function() {
-    	setTimeout(function() {
-			main()
-    	}, 2000)
-    })
+function saveScreenshot(first, second, cb) {
+	gm(imageName)
+		.drawLine(first.x, first.y, second.x, second.y)
+		.write(debugPath + Date.now() + '_l_' + imageName, function (err) {
+	  		if (!err) {
+	  			cb && cb()
+	  		}
+		});
+}
+
+function jump(first, second, isRight) {
+	const distance = calc(first, second)
+	saveScreenshot(first, second, function() {
+		console.log('距离:', distance)
+		let = pressTime = distance * (isRight ? pressCoefficient : 1.472)
+	    pressTime = parseInt(pressTime)
+	    pressTime = Math.max(pressTime, 240)
+	    console.log('按的时间:', pressTime)
+	    const destName = Date.now() + '_' + distance + '_' + pressTime + imageName
+	    console.log('文件名:', destName)
+	    console.log('\n')
+	    adbExcute(['shell', 'input swipe', swipePos.x1, swipePos.y1, swipePos.x2, swipePos.y2, pressTime], function() {
+	    	setTimeout(function() {
+				main()
+	    	}, 2000)
+	    })
+	})
 }
 
 function adbExcute(shell, cb) {
@@ -230,6 +282,7 @@ function copyFile(fileName, url, destName) {
 function main() {
 	adbExcute(['shell', 'screencap -p', '/sdcard/' + imageName], function() {
 		adbExcute(['pull', '/sdcard/' + imageName, '.'], function() {
+			copyFile(imageName, debugPath, Date.now() + imageName)
 			getCurPos(function(first) {
 				if (!first) {
 					return
@@ -237,15 +290,33 @@ function main() {
 				getNextPos(function(second1){
 					if (!second1) {
 						getNextPos(function(second2){
-							jump(calc(first, second2), second2.x > first.x)
-						}, true, first.y)
+							jump(first, second2, second2.x > first.x)	
+						}, true, first)
 					} else {
-						jump(calc(first, second1), second1.x > first.x)	
+						jump(first, second1, second1.x > first.x)		
 					}
-				}, false, first.y)
+				}, false, first)
 			})
 		})
 	})	
 }
 
+function main2() {
+	getCurPos(function(first) {
+		if (!first) {
+			return
+		}
+		getNextPos(function(second1){
+			if (!second1) {
+				getNextPos(function(second2){
+					jump(first, second2, second2.x > first.x)	
+				}, true, first)
+			} else {
+				jump(first, second1, second1.x > first.x)		
+			}
+		}, false, first)
+	})
+}
+
 main()
+// main2()
