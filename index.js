@@ -5,6 +5,7 @@ const gm = require('gm')
 const adb = require('node-adb')
 const _ = require('lodash')
 
+const isDebug = process.env.DEBUG === '1'
 const deviceID = 'e3c7a0ac'
 const imageName = "temp.png"
 const faildPath = "./failed/"
@@ -104,7 +105,7 @@ function getCurPos(cb) {
 
 function findCenter(pixels, first, cb) {
 	const width = pixels.shape[0]
-	const xArr = [], obj = {}, rgb = []
+	const xArr = [], obj = {}, rgb = [], diff = 5
 	for (let j = scoreUpHeight; j <= first.y; j++) {
     	for (let i = 0; i <= width; i++) {
             const r = pixels.get(i, j, 0)
@@ -114,8 +115,17 @@ function findCenter(pixels, first, cb) {
         		obj.r = r	
         		obj.g = g	
         		obj.b = b	
-        	}
-        	if (r !== obj.r && b !== obj.b && g !== obj.g) {
+			}
+			// 中点的x值不会在第一个点x附近
+			if (i >= first.x - 18 && i <= first.x + first.x + 20) {
+				continue
+			}
+			// 在差值外就push
+        	if (
+				r < obj.r - diff || r > obj.r + diff ||
+				g < obj.g - diff || g > obj.g + diff ||
+				b < obj.b - diff || b > obj.b + diff
+			) {
         		xArr.push(i)
         		obj.y = j
         		rgb.push({r, g, b})
@@ -125,8 +135,8 @@ function findCenter(pixels, first, cb) {
 			break
     	}
     }
-    // console.log(xArr)
-    // console.log(rgb, obj.y)
+    console.log(xArr)
+    console.log(rgb, obj.y)
     const centerX = _.sum(xArr) / xArr.length
     // 值是tan 30°, math.sqrt(3) / 3
     const centerY = first.y - Math.abs(centerX - first.x) * Math.sqrt(3) / 3
@@ -240,7 +250,10 @@ function jump(first, second, isRight) {
 	    console.log('按的时间:', pressTime)
 	    const destName = Date.now() + '_' + distance + '_' + pressTime + imageName
 	    console.log('文件名:', destName)
-	    console.log('\n')
+		console.log('\n')
+		if (isDebug) {
+			return
+		}
 	    adbExcute(['shell', 'input swipe', swipePos.x1, swipePos.y1, swipePos.x2, swipePos.y2, pressTime], async function() {
 			await sleep(2000)
 	    	main()
@@ -301,7 +314,7 @@ function main() {
 	})	
 }
 
-function main2() {
+function debug() {
 	getCurPos(function(pixels, first) {
 		if (!first) {
 			return
@@ -318,5 +331,8 @@ function main2() {
 	})
 }
 
-main()
-// main2()
+if (isDebug) {
+	debug()
+} else {
+	main()
+}
