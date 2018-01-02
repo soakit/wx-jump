@@ -86,7 +86,7 @@ function getCurPos(cb) {
                 if (checkRGB(r, g, b, i, j, pixels)) {
                 	console.log('找到起始点:', i + 8, j + 1 - 20);
                 	isFind = true
-                	cb && cb({
+                	cb && cb(pixels, {
                         x: i + 8,
                         y: j + 1 - 20
                     })
@@ -138,79 +138,74 @@ function findCenter(pixels, first, cb) {
 	})
 }
 
-function getNextPos(cb, isFirst, first) {
+function getNextPos(pixels, cb, isFirst, first) {
     if (!isFirst) {
-    	getPixels(path.resolve(imageName), function(err, pixels) {
-	        if (err) {
-	            return
-	        }
-	        const width = pixels.shape[0]
-	        // const height = pixels.shape[1]
-	        const circleW = 38, circleH = 22
-	        let xArr = [], yArr = [], arr = []
-	        for (let i = 0; i <= width; i++) {
-	            for (let j = scoreUpHeight; j <= first.y; j++) {
-	                const r = pixels.get(i, j, 0)
-	                const g = pixels.get(i, j, 1)
-	                const b = pixels.get(i, j, 2)
-	                if (r === 245 && g === 245 && b === 245) {
-	                	arr.push({
-	                		x: i,
-	                		y: j
-	                	})
-	                }
-	            }
-	        }
-	        const groupY = _.groupBy(arr, function(item) {
-	        	return item.y
-	        })
-	        for (const i in groupY) {
-	        	if (groupY[i].length >= 37 && groupY[i].length <= 39) {
-	        		xArr = xArr.concat(groupY[i].map(item => item.x))
-	        	}
-	        }
-	        const minX = Math.min.apply(Math, xArr)
-	        const maxX = Math.max.apply(Math, xArr)
-	        arr.forEach(item => {
-	        	if (item.x < minX || item.x > maxX) {
-	        		item.x = 0
-	        		item.y = 0
-	        	}
-	        })
-	        const groupX = _.groupBy(arr, function(item) {
-	        	return item.x
-	        })
-	        for (const i in groupX) {
-	        	if (groupX[i].length >= 21 && groupX[i].length <= 23) {
-	        		yArr = yArr.concat(groupX[i].map(item => item.y))
-	        	}
-	        }
-	       	// console.log(new Set(xArr))
-	       	// console.log(new Set(yArr))
-	        const minY = Math.min.apply(Math, yArr)
-	        const maxY = Math.max.apply(Math, yArr)
-	        const x = (minX + maxX) / 2
-	        const y = (minY + maxY) / 2
-	        if (maxX - minX > circleW || maxY - minY > circleH) {
-	        	// console.log('宽:',  maxX - minX, '高:',  maxY - minY)
-	        	// console.log('找错结束点了', x, y)
-	        	// copyFile(imageName, faildPath)
-	        	// return
-	        	findCenter(pixels, first, cb)
-	        }
-	        if (x && y) {
-	        	isFindEnd = true
-		        console.log('找到结束点:', x, y)
-                cb && cb({
-		        	x: x,
-		        	y: y
-	        	})
-	        } else {
-	        	// console.log('没找到结束点')
-                // cb && cb(null)
-                findCenter(pixels, first, cb)
-	        }
-	    })
+		const width = pixels.shape[0]
+		// const height = pixels.shape[1]
+		const circleW = 38, circleH = 22
+		let xArr = [], yArr = [], arr = []
+		for (let i = 0; i <= width; i++) {
+			for (let j = scoreUpHeight; j <= first.y; j++) {
+				const r = pixels.get(i, j, 0)
+				const g = pixels.get(i, j, 1)
+				const b = pixels.get(i, j, 2)
+				if (r === 245 && g === 245 && b === 245) {
+					arr.push({
+						x: i,
+						y: j
+					})
+				}
+			}
+		}
+		const groupY = _.groupBy(arr, function(item) {
+			return item.y
+		})
+		for (const i in groupY) {
+			if (groupY[i].length >= 37 && groupY[i].length <= 39) {
+				xArr = xArr.concat(groupY[i].map(item => item.x))
+			}
+		}
+		const minX = Math.min.apply(Math, xArr)
+		const maxX = Math.max.apply(Math, xArr)
+		arr.forEach(item => {
+			if (item.x < minX || item.x > maxX) {
+				item.x = 0
+				item.y = 0
+			}
+		})
+		const groupX = _.groupBy(arr, function(item) {
+			return item.x
+		})
+		for (const i in groupX) {
+			if (groupX[i].length >= 21 && groupX[i].length <= 23) {
+				yArr = yArr.concat(groupX[i].map(item => item.y))
+			}
+		}
+		// console.log(new Set(xArr))
+		// console.log(new Set(yArr))
+		const minY = Math.min.apply(Math, yArr)
+		const maxY = Math.max.apply(Math, yArr)
+		const x = (minX + maxX) / 2
+		const y = (minY + maxY) / 2
+		if (maxX - minX > circleW || maxY - minY > circleH) {
+			// console.log('宽:',  maxX - minX, '高:',  maxY - minY)
+			// console.log('找错结束点了', x, y)
+			// copyFile(imageName, faildPath)
+			// return
+			findCenter(pixels, first, cb)
+		}
+		if (x && y) {
+			isFindEnd = true
+			console.log('找到结束点:', x, y)
+			cb && cb({
+				x: x,
+				y: y
+			})
+		} else {
+			// console.log('没找到结束点')
+			// cb && cb(null)
+			findCenter(pixels, first, cb)
+		}
     } else {
     	if (!isFindEnd) {
     		console.log('用初始节点处理！')
@@ -226,9 +221,9 @@ function calc(first, second) {
 }
 
 function saveScreenshot(first, second, cb) {
-	gm(imageName)
+	gm(path.join(__dirname, imageName))
 		.drawLine(first.x, first.y, second.x, second.y)
-		.write(debugPath + Date.now() + '_l_' + imageName, function (err) {
+		.write(path.join(__dirname, debugPath + Date.now() + '_l_' + imageName), function (err) {
 	  		if (!err) {
 	  			cb && cb()
 	  		}
@@ -236,8 +231,8 @@ function saveScreenshot(first, second, cb) {
 }
 
 function jump(first, second, isRight) {
-	const distance = calc(first, second)
 	saveScreenshot(first, second, function() {
+		const distance = calc(first, second)
 		console.log('距离:', distance)
 		let = pressTime = distance * (isRight ? pressCoefficient : 1.472)
 	    pressTime = parseInt(pressTime)
@@ -246,10 +241,9 @@ function jump(first, second, isRight) {
 	    const destName = Date.now() + '_' + distance + '_' + pressTime + imageName
 	    console.log('文件名:', destName)
 	    console.log('\n')
-	    adbExcute(['shell', 'input swipe', swipePos.x1, swipePos.y1, swipePos.x2, swipePos.y2, pressTime], function() {
-	    	setTimeout(function() {
-				main()
-	    	}, 2000)
+	    adbExcute(['shell', 'input swipe', swipePos.x1, swipePos.y1, swipePos.x2, swipePos.y2, pressTime], async function() {
+			await sleep(2000)
+	    	main()
 	    })
 	})
 }
@@ -258,9 +252,15 @@ function adbExcute(shell, cb) {
 	adb({
 	    deviceID: deviceID,
 	    shell: shell
-	},function(result){
-	    cb && cb(result)
+	}, function(result){
+		if (result === undefined || result && result.indexOf('pulled') !== -1) {
+			cb && cb(result)
+		}
 	});
+}
+
+function sleep(millis) {
+    return new Promise(resolve => setTimeout(resolve, millis));
 }
 
 /**
@@ -283,13 +283,13 @@ function main() {
 	adbExcute(['shell', 'screencap -p', '/sdcard/' + imageName], function() {
 		adbExcute(['pull', '/sdcard/' + imageName, '.'], function() {
 			copyFile(imageName, debugPath, Date.now() + imageName)
-			getCurPos(function(first) {
+			getCurPos(function(pixels, first) {
 				if (!first) {
 					return
 				}
-				getNextPos(function(second1){
+				getNextPos(pixels, function(second1){
 					if (!second1) {
-						getNextPos(function(second2){
+						getNextPos(pixels, function(second2){
 							jump(first, second2, second2.x > first.x)	
 						}, true, first)
 					} else {
@@ -302,13 +302,13 @@ function main() {
 }
 
 function main2() {
-	getCurPos(function(first) {
+	getCurPos(function(pixels, first) {
 		if (!first) {
 			return
 		}
-		getNextPos(function(second1){
+		getNextPos(pixels, function(second1){
 			if (!second1) {
-				getNextPos(function(second2){
+				getNextPos(pixels, function(second2){
 					jump(first, second2, second2.x > first.x)	
 				}, true, first)
 			} else {
