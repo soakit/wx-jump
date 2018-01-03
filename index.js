@@ -143,70 +143,73 @@ function findCenter(pixels, first, cb) {
 		}
 	}
 
-    // console.log('xArr', xArr)
-    // console.log(rgb, obj, centerTop)
 	const centerX = _.sum(xArr) / xArr.length
+    // console.log('xArr', xArr)
+	// console.log(rgb, obj)
+	console.log('顶点坐标:', centerX, centerTop)
 
-	let maxJ = 0, i = 0, firstX
+	let maxJ = 0, i = 0, firstX = 0
 	if (centerX >= first.x) { // 右边
 		// 暂且估计最大块的宽度是500
-		firstX = Math.max(centerX - 500 / 2, first.x + 20)
+		firstX = Math.floor(Math.max(centerX - 500 / 2, first.x + 20))
 		maxJ = (centerX - (firstX)) * Math.sqrt(3) / 3 + centerTop
 		console.log('初始i, 初始j, 最大i, 最大j:', firstX, centerTop, centerX, maxJ)
 	} else {
 		maxJ = centerX * Math.sqrt(3) / 3 + centerTop
 		console.log('初始i, 初始j, 最大i, 最大j:', i, centerTop, centerX, maxJ)
 	}
-	for (let j = centerTop; j <= maxJ; j++) {
-		let isFirst = false
-		if (centerX >= first.x) { // 右边
-			i = firstX
-		} else {
-			i = 0
-		}
-		for (; i <= centerX; i++) {
-			const r = pixels.get(i, j, 0)
-            const g = pixels.get(i, j, 1)
-			const b = pixels.get(i, j, 2)
-			if (!isFirst) {
-				obj.r = r
-				obj.g = g
-				obj.b = b
-				isFirst = true
+	drawRect({x: firstX | i, y: centerTop}, {x: centerX, y: maxJ}, function() {
+		for (let j = centerTop; j <= maxJ; j++) {
+			let isFirst = false
+			if (centerX >= first.x) { // 右边
+				i = firstX
+			} else {
+				i = 0
 			}
-			// 在差值外就push
-			if (
-				(r < obj.r - diff || r > obj.r + diff) &&
-				(g < obj.g - diff || g > obj.g + diff) &&
-				(b < obj.b - diff || b > obj.b + diff)
-			) {
-				xArr2.push({
-					x: i,
-					r_g_b: `${r}_${g}_${b}`
-				})
-				break
+			for (; i <= centerX; i++) {
+				const r = pixels.get(i, j, 0)
+				const g = pixels.get(i, j, 1)
+				const b = pixels.get(i, j, 2)
+				if (!isFirst) {
+					obj.r = r
+					obj.g = g
+					obj.b = b
+					isFirst = true
+				}
+				// 在差值外就push
+				if (
+					(r < obj.r - diff || r > obj.r + diff) &&
+					(g < obj.g - diff || g > obj.g + diff) &&
+					(b < obj.b - diff || b > obj.b + diff)
+				) {
+					xArr2.push({
+						x: i,
+						r_g_b: `${r}_${g}_${b}`
+					})
+					break
+				}
 			}
 		}
-	}
-	const group = _.groupBy(xArr2, function(o) {
-		return o.r_g_b
-	})
-	const arr = []
-	for (const i in group) {
-		arr.push(group[i])
-	}
-	const sortedArr = _.sortBy(arr, function(o) { return !o.length })
-	const centerLeftArr = sortedArr[0].map(item => item.x)
-	const centerLeft = Math.min.apply(Math, centerLeftArr)
-	// console.log('sortedArr:', sortedArr)
-	// console.log('centerLeftArr:', centerLeftArr, centerLeft)
-	// 值是tan 30°, math.sqrt(3) / 3
-	const centerY = centerTop + Math.sqrt(3) / 3 * Math.abs(centerX - centerLeft)
-    isFindEnd = true
-    console.log('找到结束点:', centerX, centerY)
-    cb && cb({
-		x: centerX,
-		y: centerY
+		const group = _.groupBy(xArr2, function(o) {
+			return o.r_g_b
+		})
+		const arr = []
+		for (const i in group) {
+			arr.push(group[i])
+		}
+		const sortedArr = _.sortBy(arr, function(o) { return !o.length })
+		const centerLeftArr = sortedArr[0].map(item => item.x)
+		const centerLeft = Math.min.apply(Math, centerLeftArr)
+		// console.log('xArr2, group, arr, sortedArr :', xArr2, group, arr, sortedArr)
+		// console.log('centerLeftArr:', centerLeftArr, centerLeft)
+		// 值是tan 30°, math.sqrt(3) / 3
+		const centerY = centerTop + Math.sqrt(3) / 3 * Math.abs(centerX - centerLeft)
+		isFindEnd = true
+		console.log('找到结束点:', centerX, centerY)
+		cb && cb({
+			x: centerX,
+			y: centerY
+		})
 	})
 }
 
@@ -283,7 +286,19 @@ function calc(first, second) {
 	return Math.sqrt((first.x - second.x) * (first.x - second.x) + (first.y - second.y) * (first.y - second.y))
 }
 
-function saveScreenshot(first, second, cb) {
+function drawRect(first, second, cb) {
+	gm(path.join(__dirname, imageName))
+		.fill()
+		.stroke('black', 1)
+		.drawRectangle(first.x, first.y, second.x, second.y)
+		.write(path.join(__dirname, debugPath + Date.now() + '_rect.png'), function (err) {
+			if (!err) {
+				cb && cb()
+			}
+		})
+}
+
+function drawLine(first, second, cb) {
 	gm(path.join(__dirname, imageName))
 		.drawLine(first.x, first.y, second.x, second.y)
 		.write(path.join(__dirname, debugPath + Date.now() + '_line.png'), function (err) {
@@ -294,7 +309,7 @@ function saveScreenshot(first, second, cb) {
 }
 
 function jump(first, second, isRight) {
-	saveScreenshot(first, second, async function() {
+	drawLine(first, second, async function() {
 		const distance = calc(first, second)
 		console.log('距离:', distance)
 		let pressTime = distance * (isRight ? pressCoefficient : 1.472)
