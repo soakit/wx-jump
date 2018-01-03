@@ -4,9 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node index.js",
-    "debug": "cross-env DEBUG=1 node index.js"
+    "start": "cross-env DEBUG=0 node index.js",
+    "debug": "cross-env DEBUG=1 node index.js",
+    "test": "cross-env DEBUG=2 node index.js"
   },
   "author": "",
   "license": "ISC",
