@@ -105,7 +105,8 @@ function getCurPos(cb) {
 
 function findCenter(pixels, first, cb) {
 	const width = pixels.shape[0]
-	const xArr = [], obj = {}, rgb = [], diff = 5
+	const xArr = [], xArr2 = [], obj = {}, rgb = [], diff = 5, shadowDiff = 2
+	let centerTop = 0
 	for (let j = scoreUpHeight; j <= first.y; j++) {
     	for (let i = 0; i <= width; i++) {
             const r = pixels.get(i, j, 0)
@@ -117,7 +118,7 @@ function findCenter(pixels, first, cb) {
         		obj.b = b	
 			}
 			// 中点的x值不会在第一个点x附近
-			if (i >= first.x - 18 && i <= first.x + first.x + 20) {
+			if (i >= first.x - 18 && i <= first.x + 20) {
 				continue
 			}
 			// 在差值外就push
@@ -127,19 +128,72 @@ function findCenter(pixels, first, cb) {
 				b < obj.b - diff || b > obj.b + diff
 			) {
         		xArr.push(i)
-        		obj.y = j
+        		centerTop = j
         		rgb.push({r, g, b})
-        	}
-        }
+			}
+		}
         if (xArr.length > 0) {
 			break
     	}
-    }
-    console.log(xArr)
-    console.log(rgb, obj.y)
-    const centerX = _.sum(xArr) / xArr.length
-    // 值是tan 30°, math.sqrt(3) / 3
-    const centerY = first.y - Math.abs(centerX - first.x) * Math.sqrt(3) / 3
+	}
+	
+    // console.log('xArr', xArr)
+    // console.log(rgb, obj, centerTop)
+	const centerX = _.sum(xArr) / xArr.length
+
+	let maxJ = 0, i = 0
+	if (centerX >= first.x) { // 右边
+		maxJ = (centerX - (first.x + 20)) * Math.sqrt(3) / 3 + centerTop
+		console.log('初始i, 初始j, 最大i, 最大j:', i, centerTop, centerX, maxJ)
+	} else {
+		maxJ = centerX * Math.sqrt(3) / 3 + centerTop
+		console.log('初始i, 初始j, 最大i, 最大j:', i, centerTop, centerX, maxJ)
+	}
+	for(let j = centerTop; j <= maxJ; j++) {
+		let isFirst = false
+		if (centerX >= first.x) {// 右边
+			i = first.x + 20
+		} else {
+			i = 0
+		}
+		for (; i <= centerX; i++) {
+			const r = pixels.get(i, j, 0)
+            const g = pixels.get(i, j, 1)
+			const b = pixels.get(i, j, 2)
+			if (!isFirst) {
+        		obj.r = r
+        		obj.g = g
+				obj.b = b
+				isFirst = true
+			}
+			// 在差值外就push
+        	if (
+				(r < obj.r - diff || r > obj.r + diff) &&
+				(g < obj.g - diff || g > obj.g + diff) &&
+				(b < obj.b - diff || b > obj.b + diff)
+			) {
+				xArr2.push({
+					x: i,
+					r_g_b: `${r}_${g}_${b}`
+				})
+				// console.log(i, j, ':', r, g, b)
+				break
+			}
+		}
+	}
+	const group = _.groupBy(xArr2, function(o) {
+		return o.r_g_b
+	})
+	const arr = []
+	for (const i in group) {
+		arr.push(group[i])
+	}
+	const sortedArr = _.sortBy(arr, function(o) { return !o.length; })
+	const centerLeftArr = sortedArr[0].map(item => item.x)
+	const centerLeft = Math.min.apply(Math, centerLeftArr)
+	// console.log('centerLeftArr:', centerLeftArr, centerLeft)
+	// 值是tan 30°, math.sqrt(3) / 3
+	const centerY = centerTop + Math.sqrt(3) / 3 * Math.abs(centerX - centerLeft)
     isFindEnd = true
     console.log('找到结束点:', centerX, centerY)
     cb && cb({
@@ -255,7 +309,7 @@ function jump(first, second, isRight) {
 			return
 		}
 	    adbExcute(['shell', 'input swipe', swipePos.x1, swipePos.y1, swipePos.x2, swipePos.y2, pressTime], async function() {
-			await sleep(2000)
+			await sleep(3000)
 	    	main()
 	    })
 	})
