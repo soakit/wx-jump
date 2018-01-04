@@ -27,21 +27,22 @@ const swipePos = {
 const pressCoefficient = 1.468
 // 可能要调节 end
 
-function checkRGB(r, g, b, x, y, pixels) {
-	function inRange(r, g, b) {
-		if (
-			(r >= 50 && r <= 60) &&
-			(g >= 52 && g <= 62) &&
-			(b >= 95 && b <= 105)
-			//
-			// (r >= 53 && r <= 58) &&
-			// (g >= 58 && g <= 60) &&
-			// (b >= 98 && b <= 102)
-		) {
-			return true
-		}
-		return false
+function inRange(r, g, b) {
+	if (
+		(r >= 50 && r <= 60) &&
+		(g >= 52 && g <= 62) &&
+		(b >= 95 && b <= 105)
+		//
+		// (r >= 53 && r <= 58) &&
+		// (g >= 58 && g <= 60) &&
+		// (b >= 98 && b <= 102)
+	) {
+		return true
 	}
+	return false
+}
+
+function checkRGB(r, g, b, x, y, pixels) {
 	const num = 18
 	if (inRange(r, g, b)) {
 		for (const len = x + num; x < len; x++) {
@@ -80,24 +81,41 @@ function getCurPos(cb, name) {
         }
         const width = pixels.shape[0]
         const height = pixels.shape[1]
-        let isFind = false
-        // 左上角是原点
-        for (let i = 0; i < width; i++) {
-			// 从距底部180开始
-            for (let j = height - 180; j >= 0; j--) {
+        let isFind = false, arr = [], y = 0
+		// 从距底部180开始
+		for (let j = height - 180; j >= 0; j--) {
+			arr = []
+        	// 左上角是原点
+        	for (let i = 0; i < width; i++) {
                 const r = pixels.get(i, j, 0)
                 const g = pixels.get(i, j, 1)
-                const b = pixels.get(i, j, 2)
-                if (checkRGB(r, g, b, i, j, pixels)) {
-					console.log('找到起始点:', i + 8, j + 1 - 20)
-					isFind = true
-					cb && cb(pixels, {
-						x: i + 8,
-						y: j + 1 - 20
-					})
-					return
-                }
-            }
+				const b = pixels.get(i, j, 2)
+				if (inRange(r, g, b)) {
+					arr.push(i)
+					y = j
+				}
+                // if (checkRGB(r, g, b, i, j, pixels)) {
+				// 	console.log('找到起始点:', i + 8, j + 1 - 20)
+				// 	isFind = true
+				// 	cb && cb(pixels, {
+				// 		x: i + 8,
+				// 		y: j + 1 - 20
+				// 	})
+				// 	return
+                // }
+			}
+			// 12 22
+			if (arr.length >= 10 && arr.length <= 30) {
+				isFind = true
+				const minX = Math.min.apply(Math, arr)
+				const maxX = Math.max.apply(Math, arr)
+				cb && cb(pixels, {
+					x: (minX + maxX) / 2,
+					y: y + 1 - 20
+				})
+				console.log('找到起始点:', (minX + maxX) / 2, y + 1 - 20)
+				break
+			}
         }
         if (!isFind) {
 			console.log('没有找到起始点')
@@ -175,6 +193,7 @@ function findCenter(pixels, first, cb) {
 					obj.b = b
 					isFirst = true
 				}
+				
 				// 在差值外就push
 				if (
 					(r < obj.r - diff || r > obj.r + diff) &&
@@ -183,6 +202,7 @@ function findCenter(pixels, first, cb) {
 				) {
 					xArr2.push({
 						x: i,
+						y: j,
 						r_g_b: `${r}_${g}_${b}`
 					})
 					break
@@ -210,15 +230,17 @@ function findCenter(pixels, first, cb) {
 		const sortedArrX = _.sortBy(arrX, function(o) {
 			return o.length 
 		})
-		const centerLeftArr = sortedArr[sortedArr.length - 1].map(item => item.x)
-		const centerLeftArr2 = sortedArrX[sortedArrX.length - 1].map(item => item.x)
+		const lastItem = sortedArr[sortedArr.length - 1]
+		const lastItem2 = sortedArrX[sortedArrX.length - 1]
+		const centerLeftArr = lastItem.map(item => item.x)
+		const centerLeftArr2 = lastItem2.map(item => item.x)
+		console.log(lastItem, lastItem2)
 		const centerLeft = Math.max(
 			Math.min.apply(Math, centerLeftArr),
 			Math.min.apply(Math, centerLeftArr2)
 		)
 		if (isDebug === 1) {
-			console.log('sortedArr :', sortedArr)
-			console.log('centerLeftArr:', centerLeftArr, centerLeft)
+			console.log('centerLeft:', centerLeft)
 		}
 		// 值是tan 30°, math.sqrt(3) / 3
 		const centerY = centerTop + Math.sqrt(3) / 3 * Math.abs(centerX - centerLeft)
@@ -452,6 +474,6 @@ switch(isDebug) {
 		debug()
 		break
 	case 2:
-		test(1)
+		test(100)
 		break
 }
