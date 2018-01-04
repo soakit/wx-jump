@@ -128,7 +128,7 @@ function getCurPos(cb, name) {
 function findCenter(pixels, first, cb) {
 	console.log('使用块的上顶点和左顶点找中间点')
 	const width = pixels.shape[0]
-	const xArr = [], xArr2 = [], obj = {}, rgb = [], diff = 5
+	const xArr = [], xArr2 = [], obj = {}, shadowObj = {}, rgb = [], diff = 5, shadowDiff = 5
 	let centerTop = 0
 	for (let j = scoreUpHeight; j <= first.y; j++) {
 		for (let i = 0; i <= width; i++) {
@@ -178,12 +178,16 @@ function findCenter(pixels, first, cb) {
 	drawRect({x: firstX | i, y: centerTop}, {x: centerX, y: maxJ}, function() {
 		for (let j = centerTop; j <= maxJ; j++) {
 			let isFirst = false
+			let maxX = centerX - Math.sqrt(3) / 3 * (j - centerTop)
+			// if (j === 913) {
+				// console.log(maxX)
+			// }
 			if (centerX >= first.x) { // 右边
 				i = firstX
 			} else {
 				i = 0
 			}
-			for (; i <= centerX; i++) {
+			for (; i <= maxX; i++) {
 				const r = pixels.get(i, j, 0)
 				const g = pixels.get(i, j, 1)
 				const b = pixels.get(i, j, 2)
@@ -192,8 +196,18 @@ function findCenter(pixels, first, cb) {
 					obj.g = g
 					obj.b = b
 					isFirst = true
+					shadowObj.r = Math.floor(r - r * 0.3)
+					shadowObj.g = Math.floor(g - g * 0.3)
+					shadowObj.b = Math.floor(b - b * 0.3)
 				}
-				
+				// 跟影子色相近的色就continue
+				if (
+					r >= (shadowObj.r - shadowDiff) && r <= (shadowObj.r + shadowDiff) &&
+					g >= (shadowObj.g - shadowDiff) && g <= (shadowObj.g + shadowDiff) &&
+					b >= (shadowObj.b - shadowDiff) && b <= (shadowObj.b + shadowDiff)
+				) {
+					continue
+				}
 				// 在差值外就push
 				if (
 					(r < obj.r - diff || r > obj.r + diff) &&
@@ -213,7 +227,7 @@ function findCenter(pixels, first, cb) {
 			return o.r_g_b
 		})
 		const groupX = _.groupBy(xArr2, function(o) {
-			return o.x
+			return o.x + o.r_g_b
 		})
 		const arr = []
 		for (const i in groupRGB) {
@@ -234,12 +248,12 @@ function findCenter(pixels, first, cb) {
 		const lastItem2 = sortedArrX[sortedArrX.length - 1]
 		const centerLeftArr = lastItem.map(item => item.x)
 		const centerLeftArr2 = lastItem2.map(item => item.x)
-		console.log(lastItem, lastItem2)
-		const centerLeft = Math.max(
-			Math.min.apply(Math, centerLeftArr),
-			Math.min.apply(Math, centerLeftArr2)
-		)
+		let centerLeft = Math.min.apply(Math, centerLeftArr)
+		if (lastItem2.length >= 10) {
+			centerLeft = centerLeftArr2[0]
+		}
 		if (isDebug === 1) {
+			console.log(lastItem, lastItem2)
 			console.log('centerLeft:', centerLeft)
 		}
 		// 值是tan 30°, math.sqrt(3) / 3
@@ -340,6 +354,7 @@ function drawRect(first, second, cb) {
 
 function drawLine(first, second, cb) {
 	gm(path.join(__dirname, imageName))
+		.stroke('red', 3)
 		.drawLine(first.x, first.y, second.x, second.y)
 		.write(path.join(__dirname, debugPath + Date.now() + '_line.png'), function (err) {
 			if (!err) {
@@ -369,7 +384,7 @@ function jump(first, second, isRight) {
 		}
 		const randomNum = 56
 		adbExcute(['shell', 'input swipe', _.random(swipePos.x1 - randomNum , swipePos.x1 + randomNum), _.random(swipePos.y1 - randomNum , swipePos.y1 + randomNum), _.random(swipePos.x2 - randomNum , swipePos.x2 + randomNum), _.random(swipePos.y2 - randomNum , swipePos.y2 + randomNum), pressTime], async function() {
-			await sleep(3000)
+			await sleep(_.random(2500, 3200))
 			main()
 		})
 	})
