@@ -88,7 +88,6 @@ function getCurPos(cb, name) {
                 const r = pixels.get(i, j, 0)
                 const g = pixels.get(i, j, 1)
                 const b = pixels.get(i, j, 2)
-                // if (i === 328 && j ===1129)
                 if (checkRGB(r, g, b, i, j, pixels)) {
 					console.log('找到起始点:', i + 8, j + 1 - 20)
 					isFind = true
@@ -124,7 +123,7 @@ function findCenter(pixels, first, cb) {
 				obj.b = b
 			}
 			// 中点的x值不会在第一个点x附近
-			if (i >= first.x - 18 && i <= first.x + 20) {
+			if (i >= first.x - 30 && i <= first.x + 30) {
 				continue
 			}
 			// 在差值外就push
@@ -151,11 +150,11 @@ function findCenter(pixels, first, cb) {
 	let maxJ = 0, i = 0, firstX = 0
 	if (centerX >= first.x) { // 右边
 		// 暂且估计最大块的宽度是500
-		firstX = Math.floor(Math.max(centerX - 500 / 2, first.x + 20))
-		maxJ = (centerX - (firstX)) * Math.sqrt(3) / 3 + centerTop
+		firstX = Math.floor(Math.max(centerX - 500 / 2, first.x + 35))
+		maxJ = Math.min((centerX - (firstX)) * Math.sqrt(3) / 3 + centerTop, first.y)
 		console.log('初始i, 初始j, 最大i, 最大j:', firstX, centerTop, centerX, maxJ)
 	} else {
-		maxJ = centerX * Math.sqrt(3) / 3 + centerTop
+		maxJ = Math.min(centerX * Math.sqrt(3) / 3 + centerTop, first.y)
 		console.log('初始i, 初始j, 最大i, 最大j:', i, centerTop, centerX, maxJ)
 	}
 	drawRect({x: firstX | i, y: centerTop}, {x: centerX, y: maxJ}, function() {
@@ -190,18 +189,37 @@ function findCenter(pixels, first, cb) {
 				}
 			}
 		}
-		const group = _.groupBy(xArr2, function(o) {
+		const groupRGB = _.groupBy(xArr2, function(o) {
 			return o.r_g_b
 		})
+		const groupX = _.groupBy(xArr2, function(o) {
+			return o.x
+		})
 		const arr = []
-		for (const i in group) {
-			arr.push(group[i])
+		for (const i in groupRGB) {
+			arr.push(groupRGB[i])
 		}
-		const sortedArr = _.sortBy(arr, function(o) { return !o.length })
-		const centerLeftArr = sortedArr[0].map(item => item.x)
-		const centerLeft = Math.min.apply(Math, centerLeftArr)
-		// console.log('xArr2, group, arr, sortedArr :', xArr2, group, arr, sortedArr)
-		// console.log('centerLeftArr:', centerLeftArr, centerLeft)
+		const arrX = []
+		for (const i in groupX) {
+			arrX.push(groupX[i])
+		}
+		const sortedArr = _.sortBy(arr, function(o) {
+			return o.length 
+		})
+		// fix #16
+		const sortedArrX = _.sortBy(arrX, function(o) {
+			return o.length 
+		})
+		const centerLeftArr = sortedArr[sortedArr.length - 1].map(item => item.x)
+		const centerLeftArr2 = sortedArrX[sortedArrX.length - 1].map(item => item.x)
+		const centerLeft = Math.max(
+			Math.min.apply(Math, centerLeftArr),
+			Math.min.apply(Math, centerLeftArr2)
+		)
+		if (isDebug === 1) {
+			console.log('sortedArr :', sortedArr)
+			console.log('centerLeftArr:', centerLeftArr, centerLeft)
+		}
 		// 值是tan 30°, math.sqrt(3) / 3
 		const centerY = centerTop + Math.sqrt(3) / 3 * Math.abs(centerX - centerLeft)
 		isFindEnd = true
@@ -312,7 +330,7 @@ function jump(first, second, isRight) {
 	drawLine(first, second, async function() {
 		const distance = calc(first, second)
 		console.log('距离:', distance)
-		let pressTime = distance * (isRight ? pressCoefficient : 1.472)
+		let pressTime = distance * (isRight ? pressCoefficient : 1.48)
 		pressTime = parseInt(pressTime)
 		pressTime = Math.max(pressTime, 240)
 		console.log('按的时间:', pressTime)
@@ -327,7 +345,8 @@ function jump(first, second, isRight) {
 			}
 			return
 		}
-		adbExcute(['shell', 'input swipe', swipePos.x1, swipePos.y1, swipePos.x2, swipePos.y2, pressTime], async function() {
+		const randomNum = 56
+		adbExcute(['shell', 'input swipe', _.random(swipePos.x1 - randomNum , swipePos.x1 + randomNum), _.random(swipePos.y1 - randomNum , swipePos.y1 + randomNum), _.random(swipePos.x2 - randomNum , swipePos.x2 + randomNum), _.random(swipePos.y2 - randomNum , swipePos.y2 + randomNum), pressTime], async function() {
 			await sleep(3000)
 			main()
 		})
