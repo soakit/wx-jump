@@ -367,7 +367,7 @@ function jump(first, second, isRight) {
 	drawLine(first, second, async function() {
 		const distance = calc(first, second)
 		console.log('距离:', distance)
-		let pressTime = distance * (isRight ? pressCoefficient : 1.48)
+		let pressTime = distance * (isRight ? pressCoefficient : 1.475)
 		pressTime = parseInt(pressTime)
 		pressTime = Math.max(pressTime, 240)
 		console.log('按的时间:', pressTime)
@@ -384,7 +384,7 @@ function jump(first, second, isRight) {
 		}
 		const randomNum = 56
 		adbExcute(['shell', 'input swipe', _.random(swipePos.x1 - randomNum , swipePos.x1 + randomNum), _.random(swipePos.y1 - randomNum , swipePos.y1 + randomNum), _.random(swipePos.x2 - randomNum , swipePos.x2 + randomNum), _.random(swipePos.y2 - randomNum , swipePos.y2 + randomNum), pressTime], async function() {
-			await sleep(_.random(2500, 3200))
+			await sleep(_.random(3500, 5000))
 			main()
 		})
 	})
