@@ -341,10 +341,13 @@ function calc(first, second) {
 }
 
 function drawRect(first, second, cb) {
+	// first 左上角的点
+	// second 右下角的点
 	gm(path.join(__dirname, imageName))
 		.fill()
 		.stroke('black', 1)
-		.drawRectangle(first.x, first.y, second.x, second.y)
+		// .drawRectangle(first.x, first.y, second.x, second.y)
+		.drawPolygon([first.x, second.y], [first.x, first.y] ,[second.x, first.y])
 		.write(path.join(__dirname, debugPath + Date.now() + '_rect.png'), function (err) {
 			if (!err) {
 				cb && cb()
