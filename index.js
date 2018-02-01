@@ -167,9 +167,9 @@ function findCenter(pixels, first, cb) {
 
 	let maxJ = 0, i = 0, firstX = 0
 	if (centerX >= first.x) { // 右边
-		// 暂且估计最大块的宽度是500
-		firstX = Math.floor(Math.max(centerX - 500 / 2, first.x + 35))
-		maxJ = Math.min((centerX - (firstX)) * Math.sqrt(3) / 3 + centerTop, first.y)
+		// 暂且最大块的宽度是徐记士多520
+		firstX = Math.floor(Math.max(centerX - 520 / 2, first.x + 30))
+		maxJ = Math.min((centerX - firstX) * Math.sqrt(3) / 3 + centerTop, first.y)
 		console.log('初始i, 初始j, 最大i, 最大j:', firstX, centerTop, centerX, maxJ)
 	} else {
 		maxJ = Math.min(centerX * Math.sqrt(3) / 3 + centerTop, first.y)
@@ -492,6 +492,6 @@ switch(isDebug) {
 		debug()
 		break
 	case 2:
-		test(100)
+		test(101)
 		break
 }
